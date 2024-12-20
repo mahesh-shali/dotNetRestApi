@@ -10,13 +10,13 @@ namespace RestApi.Models
 
         [MaxLength(255)] // Adjust the size to suit hashed passwords
         public string? Password { get; set; }
-        public string? Phone { get; set; }
+        public long? Phone { get; set; }
         public long RoleId { get; set; }
 
         public Role? Role { get; set; } // Navigation property
 
-        public DateTime createdAt { get; set; } = DateTime.UtcNow;
+        public DateTime createdAt { get; set; }
 
-        public DateTime modifiedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? modifiedAt { get; set; }
     }
 }

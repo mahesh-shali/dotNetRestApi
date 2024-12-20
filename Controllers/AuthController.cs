@@ -26,7 +26,7 @@ namespace RestApi.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(string name, string email, string password, string phone, long RoleId)
+        public async Task<IActionResult> Register(string name, string email, string password, long phone, long RoleId)
         {
             // Check if the role exists
             var role = await _context.Roles.FindAsync(RoleId);
@@ -36,6 +36,8 @@ namespace RestApi.Controllers
             // Check if the email is already registered
             if (await _context.Users.AnyAsync(u => u.Email == email))
                 return BadRequest("Email is already registered.");
+            if (await _context.Users.AnyAsync(u => u.Phone == phone))
+                return BadRequest("Phone number already registered.");
 
             // Hash the password
             var hashedPassword = BCrypt.Net.BCrypt.HashPassword(password);
@@ -47,8 +49,9 @@ namespace RestApi.Controllers
                 Email = email,
                 Password = hashedPassword,
                 Phone = phone,
-                RoleId = RoleId
-                createdAt = DateTime.UtcNow
+                RoleId = RoleId,
+                createdAt = DateTime.UtcNow,
+                modifiedAt = null
             };
 
             _context.Users.Add(user);
