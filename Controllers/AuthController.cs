@@ -85,10 +85,9 @@ namespace RestApi.Controllers
         }
 
         [Authorize(Roles = "admin")]
-        [HttpGet("admin-only")]
+        [HttpGet("admin")]
         public IActionResult AdminOnly()
         {
-            //pushing to git
             return Ok("Welcome, Admin!");
         }
 
