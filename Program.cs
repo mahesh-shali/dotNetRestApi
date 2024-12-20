@@ -5,9 +5,6 @@ using RestApi.Data;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-//add from main
-
-//adding by mahesh
 
 // Add services to the container
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
