@@ -48,6 +48,7 @@ namespace RestApi.Controllers
                 Password = hashedPassword,
                 Phone = phone,
                 RoleId = RoleId
+                createdAt = DateTime.UtcNow
             };
 
             _context.Users.Add(user);

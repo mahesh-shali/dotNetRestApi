@@ -14,5 +14,9 @@ namespace RestApi.Models
         public long RoleId { get; set; }
 
         public Role? Role { get; set; } // Navigation property
+
+        public DateTime createdAt { get; set; } = DateTime.UtcNow;
+
+        public DateTime modifiedAt { get; set; } = DateTime.UtcNow;
     }
 }
