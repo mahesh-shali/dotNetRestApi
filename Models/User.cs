@@ -19,8 +19,8 @@ namespace RestApi.Models
         [Required(ErrorMessage = "Phone is required.")]
         public long Phone { get; set; }
 
-        [Required(ErrorMessage = "RoleId is required.")]
-        public long RoleId { get; set; }
+        // [Required(ErrorMessage = "RoleId is required.")]
+        public long? RoleId { get; set; }
 
         public Role? Role { get; set; } // Navigation property
 

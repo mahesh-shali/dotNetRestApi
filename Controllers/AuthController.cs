@@ -38,12 +38,19 @@ namespace RestApi.Controllers
 
             try
             {
-                _logger.LogInformation($"Received registration request: Name={user.Name}, Email={user.Email}, Phone={user.Phone}, RoleId={user.RoleId}");
+                // _logger.LogInformation($"Received registration request: Name={user.Name}, Email={user.Email}, Phone={user.Phone}, RoleId={user.RoleId}");
 
                 // Check if the role exists
                 var role = await _context.Roles.FindAsync(user.RoleId);
+
                 if (role == null)
-                    return BadRequest("Role does not exist.");
+                {
+                    user.RoleId = 2;
+                }
+                else
+                {
+                    user.RoleId = role.RoleId;
+                }
 
                 // Check if the email is already registered
                 if (await _context.Users.AnyAsync(u => u.Email == user.Email))

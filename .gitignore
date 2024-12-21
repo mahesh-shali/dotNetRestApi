@@ -2,4 +2,4 @@
 .github/
 obj/
 bin/
-
+.env

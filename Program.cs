@@ -15,17 +15,17 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAllOrigins", policy =>
     {
-        policy.AllowAnyOrigin()  // Allows any origin
-              .AllowAnyMethod()  // Allows any HTTP method (GET, POST, etc.)
-              .AllowAnyHeader(); // Allows any header
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
 
 builder.Services.AddControllers();
 
-// Swagger-related services have been commented out
-// builder.Services.AddEndpointsApiExplorer();
-// builder.Services.AddSwaggerGen();
+// Swagger-related services
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 // Add JWT Authentication
 builder.Services.AddAuthentication(options =>
@@ -46,22 +46,41 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// Add authorization policies (if required)
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+// Custom middleware for handling 404 errors
+app.Use(async (context, next) =>
+{
+    await next();
+
+    // If no controller matched, return 404
+    if (context.Response.StatusCode == 404)
+    {
+        var errorResponse = new ApiErrorResponse(
+     status: 404,
+     message: "Not Found",
+     detail: "The requested resource could not be found.",
+     instance: context.Request.Path,
+     errors: new List<string> { "No matching route found for the requested API." }
+ );
+
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(errorResponse);
+    }
+});
+
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
-    // Swagger middleware has been commented out
-    // app.UseSwagger();
-    // app.UseSwaggerUI();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAllOrigins");
-app.UseAuthentication(); // Enable authentication middleware
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
