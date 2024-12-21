@@ -18,81 +18,127 @@ namespace RestApi.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(ApplicationDbContext context, IConfiguration configuration)
+        public AuthController(ApplicationDbContext context, IConfiguration configuration, ILogger<AuthController> logger)
         {
             _context = context;
             _configuration = configuration;
+            _logger = logger;
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(string name, string email, string password, long phone, long RoleId)
+        public async Task<IActionResult> Register([FromBody] User user)
         {
-            // Check if the role exists
-            var role = await _context.Roles.FindAsync(RoleId);
-            if (role == null)
-                return BadRequest("Role does not exist.");
-
-            // Check if the email is already registered
-            if (await _context.Users.AnyAsync(u => u.Email == email))
-                return BadRequest("Email is already registered.");
-            if (await _context.Users.AnyAsync(u => u.Phone == phone))
-                return BadRequest("Phone number already registered.");
-
-            // Hash the password
-            var hashedPassword = BCrypt.Net.BCrypt.HashPassword(password);
-
-            // Create new user
-            var user = new User
+            // Validate the model
+            if (!ModelState.IsValid)
             {
-                Name = name,
-                Email = email,
-                Password = hashedPassword,
-                Phone = phone,
-                RoleId = RoleId,
-                createdAt = DateTime.UtcNow,
-                modifiedAt = null
-            };
+                return BadRequest(ModelState);
+            }
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            try
+            {
+                _logger.LogInformation($"Received registration request: Name={user.Name}, Email={user.Email}, Phone={user.Phone}, RoleId={user.RoleId}");
 
-            return Ok("User registered successfully.");
+                // Check if the role exists
+                var role = await _context.Roles.FindAsync(user.RoleId);
+                if (role == null)
+                    return BadRequest("Role does not exist.");
+
+                // Check if the email is already registered
+                if (await _context.Users.AnyAsync(u => u.Email == user.Email))
+                    return BadRequest("Email is already registered.");
+
+                // Check if the phone is already registered
+                if (await _context.Users.AnyAsync(u => u.Phone == user.Phone))
+                    return BadRequest("Phone number already registered.");
+
+                if (user.Password.Length < 6)
+                {
+                    return BadRequest("Password must be at least 6 characters.");
+                }
+
+                // Hash the password
+                var hashedPassword = BCrypt.Net.BCrypt.HashPassword(user.Password);
+
+
+                // Create a new user
+                var newUser = new User
+                {
+                    Name = user.Name,
+                    Email = user.Email,
+                    Password = hashedPassword,
+                    Phone = user.Phone,
+                    RoleId = user.RoleId,
+                    createdAt = DateTime.UtcNow,
+                };
+
+                _context.Users.Add(newUser);
+                await _context.SaveChangesAsync();
+
+                return Ok("User registered successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while registering user.");
+                return StatusCode(500, "Internal server error");
+            }
         }
-
-        //work on login page
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login(string email, string password)
+        public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
         {
-            // Find user by email
-            var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Email == email);
-
-            if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.Password))
-                return Unauthorized("Invalid email or password.");
-
-            // Generate claims for JWT
-            var authClaims = new List<Claim>
+            try
             {
-                new Claim(ClaimTypes.Name, user.Name),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role.Name)
-            };
+                // Validate the model
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
 
-            var token = GenerateToken(authClaims);
+                // Find user by email or username
+                var user = await _context.Users
+                                         .Include(u => u.Role)
+                                         .FirstOrDefaultAsync(u => u.Email == loginRequest.EmailOrUsername || u.Name == loginRequest.EmailOrUsername);
 
-            return Ok(new
+                if (user == null || !BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.Password))
+                {
+                    return Unauthorized("Invalid email/username or password.");
+                }
+
+                // Generate claims for JWT
+                var authClaims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.Name, user.Name),
+                    new Claim(ClaimTypes.Email, user.Email),
+                    new Claim(ClaimTypes.Role, user.Role.Name),
+                    new Claim("RoleId", user.RoleId.ToString()) // Adding RoleId explicitly
+                };
+
+                var token = GenerateToken(authClaims);
+
+                return Ok(new
+                {
+                    Message = "Login successful",
+                    Token = new JwtSecurityTokenHandler().WriteToken(token),
+                    Expiration = token.ValidTo,
+                    User = new
+                    {
+                        user.UserId,
+                        user.Email,
+                        user.Name,
+                        Role = user.Role.Name
+                    }
+                });
+            }
+            catch (Exception ex)
             {
-                token = new JwtSecurityTokenHandler().WriteToken(token),
-                expiration = token.ValidTo
-            });
-        }
+                // Log the error (can log to a file, database, or logging service)
+                _logger.LogError($"An error occurred during login: {ex.Message}");
 
-        [Authorize(Roles = "admin")]
-        [HttpGet("admin")]
-        public IActionResult AdminOnly()
-        {
-            return Ok("Welcome, Admin!");
+                // Return a generic error response
+                return StatusCode(500, "Internal server error. Please try again later.");
+            }
         }
 
         private JwtSecurityToken GenerateToken(IEnumerable<Claim> claims)
