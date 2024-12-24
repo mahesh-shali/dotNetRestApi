@@ -28,13 +28,16 @@ namespace RestApi.Controllers
         }
 
         // Admin Dashboard Route
+
         [HttpGet("dashboard")]
+        [Authorize(Roles = "admin")]
         public IActionResult AdminDashboard()
         {
             return Ok("Welcome, Admin!");
         }
 
         // Admin Settings Route
+        [Authorize(Roles = "admin")]
         [HttpGet("settings")]
         public IActionResult AdminSettings()
         {
@@ -42,7 +45,9 @@ namespace RestApi.Controllers
         }
 
         // Get specific user by ID
+
         [HttpGet("user/{id}")]
+        [Authorize(Roles = "admin")]
         public async Task<IActionResult> GetUserById(long id)
         {
             try
@@ -84,7 +89,9 @@ namespace RestApi.Controllers
         }
 
         // Get all users
+
         [HttpGet("users")]
+        [Authorize(Roles = "admin")]
         public async Task<IActionResult> GetAllUsers()
         {
             try

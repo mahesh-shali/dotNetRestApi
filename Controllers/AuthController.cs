@@ -108,19 +108,28 @@ namespace RestApi.Controllers
                                          .Include(u => u.Role)
                                          .FirstOrDefaultAsync(u => u.Email == loginRequest.EmailOrUsername || u.Name == loginRequest.EmailOrUsername);
 
+                // Check if user exists or password is invalid
                 if (user == null || !BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.Password))
                 {
-                    return Unauthorized("Invalid email/username or password.");
+                    // Return a single generic error for invalid credentials
+                    return Unauthorized(new
+                    {
+                        message = "Invalid email/username or password.",
+                        errors = new
+                        {
+                            credentials = "Invalid email/username or password."
+                        }
+                    });
                 }
 
                 // Generate claims for JWT
                 var authClaims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, user.Name),
-                    new Claim(ClaimTypes.Email, user.Email),
-                    new Claim(ClaimTypes.Role, user.Role.Name),
-                    new Claim("RoleId", user.RoleId.ToString()) // Adding RoleId explicitly
-                };
+        {
+            new Claim(ClaimTypes.Name, user.Name),
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Role, user.Role.Name),
+            new Claim("RoleId", user.RoleId.ToString()) // Adding RoleId explicitly
+        };
 
                 var token = GenerateToken(authClaims);
 
@@ -147,6 +156,7 @@ namespace RestApi.Controllers
                 return StatusCode(500, "Internal server error. Please try again later.");
             }
         }
+
 
         private JwtSecurityToken GenerateToken(IEnumerable<Claim> claims)
         {

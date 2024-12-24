@@ -19,6 +19,7 @@ namespace RestApi.Controllers
         }
 
         // Endpoint for user dashboard
+        [Authorize(Roles = "user")]
         [HttpGet("dashboard")]
         public IActionResult UserDashboard()
         {
@@ -26,6 +27,7 @@ namespace RestApi.Controllers
         }
 
         // Endpoint for user settings
+        [Authorize(Roles = "user")]
         [HttpGet("settings")]
         public IActionResult UserSettings()
         {
