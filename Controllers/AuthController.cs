@@ -149,10 +149,8 @@ namespace RestApi.Controllers
             }
             catch (Exception ex)
             {
-                // Log the error (can log to a file, database, or logging service)
                 _logger.LogError($"An error occurred during login: {ex.Message}");
 
-                // Return a generic error response
                 return StatusCode(500, "Internal server error. Please try again later.");
             }
         }
