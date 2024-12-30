@@ -28,7 +28,7 @@ namespace RestApi.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] User user)
+        public async Task<IActionResult> Register([FromBody] RegisterRequest registerRequest)
         {
             // Validate the model
             if (!ModelState.IsValid)
@@ -38,46 +38,56 @@ namespace RestApi.Controllers
 
             try
             {
-                // _logger.LogInformation($"Received registration request: Name={user.Name}, Email={user.Email}, Phone={user.Phone}, RoleId={user.RoleId}");
+                _logger.LogInformation($"Received registration request: Name={registerRequest.Name}, Email={registerRequest.Email}, Phone={registerRequest.Phone}, RoleId={registerRequest.RoleId}, IpAddress={registerRequest.IpAddress}, Browser={registerRequest.BrowserInfo?.Browser}, BrowserVersion={registerRequest.BrowserInfo?.BrowserVersion}, OS={registerRequest.OS}, PhonePrefix={registerRequest.PhonePrefix}");
 
                 // Check if the role exists
-                var role = await _context.Roles.FindAsync(user.RoleId);
+                var role = await _context.Roles.FindAsync(registerRequest.RoleId);
 
                 if (role == null)
                 {
-                    user.RoleId = 2;
-                }
-                else
-                {
-                    user.RoleId = role.RoleId;
+                    registerRequest.RoleId = 2; // Default RoleId
                 }
 
                 // Check if the email is already registered
-                if (await _context.Users.AnyAsync(u => u.Email == user.Email))
+                if (await _context.Users.AnyAsync(u => u.Email == registerRequest.Email))
                     return BadRequest("Email is already registered.");
 
                 // Check if the phone is already registered
-                if (await _context.Users.AnyAsync(u => u.Phone == user.Phone))
+                if (await _context.Users.AnyAsync(u => u.Phone == registerRequest.Phone))
                     return BadRequest("Phone number already registered.");
 
-                if (user.Password.Length < 6)
+                if (registerRequest.Password.Length < 8)
                 {
-                    return BadRequest("Password must be at least 6 characters.");
+                    return BadRequest("Password must be at least 8 characters.");
                 }
 
                 // Hash the password
-                var hashedPassword = BCrypt.Net.BCrypt.HashPassword(user.Password);
+                var hashedPassword = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password);
 
-
-                // Create a new user
+                // Create a new user object
                 var newUser = new User
                 {
-                    Name = user.Name,
-                    Email = user.Email,
+                    Name = registerRequest.Name,
+                    Email = registerRequest.Email,
                     Password = hashedPassword,
-                    Phone = user.Phone,
-                    RoleId = user.RoleId,
+                    Phone = registerRequest.Phone,
+                    RoleId = registerRequest.RoleId ?? 2,
                     createdAt = DateTime.UtcNow,
+                    modifiedAt = null,
+                    IpAddress = registerRequest.IpAddress,
+                    Browser = registerRequest.BrowserInfo?.Browser,
+                    BrowserVersion = registerRequest.BrowserInfo?.BrowserVersion,
+                    OS = registerRequest.OS,
+                    PhonePrefix = registerRequest.PhonePrefix,
+                    IsEmailVerified = false,
+                    IsPhoneNumberVerified = false,
+                    IsLoggedInByGoogleId = false,
+                    Street = "",
+                    City = "",
+                    State = "",
+                    PostalCode = "",
+                    Country = "",
+                    IsLoggedInByFaceBookId = false
                 };
 
                 _context.Users.Add(newUser);
@@ -91,6 +101,9 @@ namespace RestApi.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
+
+
+
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
